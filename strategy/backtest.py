@@ -10,7 +10,7 @@ def backtest(signals, s1, s2, hedge_ratio, capital=10000):
     daily_spread = s1 - hedge_ratio * s2
     daily_pnl = position.shift(1) * daily_spread.diff()
     daily_pnl = daily_pnl.fillna(0)
-    
+
     # Transaction costs
     transaction_cost = 0.001  # 0.1% per trade
     trades = position.diff().abs().fillna(0)
@@ -44,3 +44,35 @@ def backtest(signals, s1, s2, hedge_ratio, capital=10000):
     plt.show()
 
     return total_return, sharpe
+
+def backtest_api(signals, s1, s2, hedge_ratio, capital=10000):
+    s1, s2 = s1.align(s2, join='inner')
+    signals = signals.reindex(s1.index).fillna(0)
+
+    position = signals["signal"]
+    daily_spread = s1 - hedge_ratio * s2
+    daily_pnl = position.shift(1) * daily_spread.diff()
+    daily_pnl = daily_pnl.fillna(0)
+
+    transaction_cost = 0.001
+    trades = position.diff().abs().fillna(0)
+    cost = trades * transaction_cost * capital
+    daily_pnl = daily_pnl - cost
+
+    cumulative_pnl = daily_pnl.cumsum()
+    equity_curve = capital + cumulative_pnl
+
+    total_return = (equity_curve.iloc[-1] - capital) / capital * 100
+    sharpe = (daily_pnl.mean() / daily_pnl.std()) * (252**0.5) if daily_pnl.std() != 0 else 0
+
+    return {
+        "total_return": round(float(total_return), 2),
+        "sharpe_ratio": round(float(sharpe), 2),
+        "hedge_ratio": round(float(hedge_ratio), 4),
+        "buy_signals": int((signals["signal"] == 1).sum()),
+        "sell_signals": int((signals["signal"] == -1).sum()),
+        "dates": [str(d) for d in equity_curve.index],
+        "equity_curve": [round(float(v), 2) for v in equity_curve.values],
+        "zscore": [round(float(v), 4) for v in signals["zscore"].values],
+        "signals": [int(v) for v in signals["signal"].values]
+    }
