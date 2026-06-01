@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import yfinance as yf
 import sys, os
@@ -9,6 +9,10 @@ from strategy.backtest import backtest_api
 
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/')
+def home():
+    return send_from_directory('docs', 'index.html')
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
