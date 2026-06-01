@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pairs Trading Strategy — ARIMA</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f13; color: #e0e0e0; }
+
+    nav { padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+    nav h1 { font-size: 18px; font-weight: 500; color: #fff; }
+    nav a { color: #888; text-decoration: none; font-size: 14px; }
+    nav a:hover { color: #fff; }
+
+    .hero { text-align: center; padding: 80px 40px 60px; }
+    .hero h2 { font-size: 48px; font-weight: 600; color: #fff; line-height: 1.2; margin-bottom: 16px; }
+    .hero h2 span { color: #7c6af7; }
+    .hero p { font-size: 18px; color: #888; max-width: 600px; margin: 0 auto 40px; line-height: 1.6; }
+
+    .controls { background: #16161e; border: 1px solid #222; border-radius: 16px; padding: 32px; max-width: 700px; margin: 0 auto 60px; }
+    .controls h3 { font-size: 16px; font-weight: 500; color: #fff; margin-bottom: 20px; }
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .input-group label { display: block; font-size: 12px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .input-group input { width: 100%; background: #0f0f13; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; outline: none; }
+    .input-group input:focus { border-color: #7c6af7; }
+    button#run-btn { width: 100%; padding: 14px; background: #7c6af7; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+    button#run-btn:hover { background: #6a5ae0; }
+    button#run-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 900px; margin: 0 auto 40px; padding: 0 40px; }
+    .stat-card { background: #16161e; border: 1px solid #222; border-radius: 12px; padding: 20px; text-align: center; }
+    .stat-card .value { font-size: 28px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .stat-card .value.positive { color: #4ade80; }
+    .stat-card .value.negative { color: #f87171; }
+    .stat-card .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .charts { max-width: 1000px; margin: 0 auto; padding: 0 40px 80px; display: flex; flex-direction: column; gap: 32px; }
+    .chart-card { background: #16161e; border: 1px solid #222; border-radius: 16px; padding: 28px; }
+    .chart-card h4 { font-size: 15px; font-weight: 500; color: #fff; margin-bottom: 20px; }
+    .chart-card canvas { width: 100% !important; }
+
+    .loading { text-align: center; padding: 40px; color: #666; display: none; }
+    .loading.active { display: block; }
+    .spinner { width: 32px; height: 32px; border: 2px solid #333; border-top-color: #7c6af7; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error { background: #1a0f0f; border: 1px solid #f87171; border-radius: 10px; padding: 16px; color: #f87171; font-size: 14px; max-width: 700px; margin: 0 auto 20px; display: none; }
+    .error.active { display: block; }
+
+    footer { text-align: center; padding: 40px; border-top: 1px solid #222; color: #444; font-size: 13px; }
+    footer a { color: #666; text-decoration: none; }
+    footer a:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <h1>Pairs Trading</h1>
+  <a href="https://github.com/YOUR_USERNAME/pairs-trading" target="_blank">View on GitHub →</a>
+</nav>
+
+<div class="hero">
+  <h2>Algorithmic <span>Pairs Trading</span><br>Strategy Backtester</h2>
+  <p>Enter any two stock tickers to backtest a statistical arbitrage strategy using spread z-scores and ARIMA modeling.</p>
+</div>
+
+<div class="controls">
+  <h3>Configure Strategy</h3>
+  <div class="input-grid">
+    <div class="input-group">
+      <label>Stock 1</label>
+      <input type="text" id="ticker1" value="MSFT" placeholder="e.g. MSFT">
+    </div>
+    <div class="input-group">
+      <label>Stock 2</label>
+      <input type="text" id="ticker2" value="GOOGL" placeholder="e.g. GOOGL">
+    </div>
+    <div class="input-group">
+      <label>Start Date</label>
+      <input type="date" id="start" value="2019-01-01">
+    </div>
+    <div class="input-group">
+      <label>End Date</label>
+      <input type="date" id="end" value="2023-12-31">
+    </div>
+  </div>
+  <button id="run-btn" onclick="runStrategy()">Run Backtest ↗</button>
+</div>
+
+<div class="error" id="error-box"></div>
+<div class="loading" id="loading"><div class="spinner"></div>Running backtest...</div>
+
+<div class="stats" id="stats" style="display:none">
+  <div class="stat-card"><div class="value" id="stat-return">—</div><div class="label">Total Return</div></div>
+  <div class="stat-card"><div class="value" id="stat-sharpe">—</div><div class="label">Sharpe Ratio</div></div>
+  <div class="stat-card"><div class="value" id="stat-buys">—</div><div class="label">Buy Signals</div></div>
+  <div class="stat-card"><div class="value" id="stat-sells">—</div><div class="label">Sell Signals</div></div>
+</div>
+
+<div class="charts" id="charts" style="display:none">
+  <div class="chart-card">
+    <h4>Portfolio Equity Curve</h4>
+    <canvas id="equity-chart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h4>Spread Z-Score with Trading Signals</h4>
+    <canvas id="zscore-chart"></canvas>
+  </div>
+</div>
+
+<footer>
+  Built by <a href="https://github.com/YOUR_USERNAME">Your Name</a> · Pairs Trading Strategy using ARIMA & Statistical Arbitrage
+</footer>
+
+<script>
+const API = 'http://localhost:5000';
+let equityChart, zscoreChart;
+
+async function runStrategy() {
+  const btn = document.getElementById('run-btn');
+  const loading = document.getElementById('loading');
+  const errorBox = document.getElementById('error-box');
+  const stats = document.getElementById('stats');
+  const charts = document.getElementById('charts');
+
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+  loading.classList.add('active');
+  errorBox.classList.remove('active');
+  stats.style.display = 'none';
+  charts.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ticker1: document.getElementById('ticker1').value.toUpperCase(),
+        ticker2: document.getElementById('ticker2').value.toUpperCase(),
+        start: document.getElementById('start').value,
+        end: document.getElementById('end').value
+      })
+    });
+
+    const data = await res.json();
+
+    // Stats
+    const retEl = document.getElementById('stat-return');
+    retEl.textContent = data.total_return + '%';
+    retEl.className = 'value ' + (data.total_return >= 0 ? 'positive' : 'negative');
+    const shrEl = document.getElementById('stat-sharpe');
+    shrEl.textContent = data.sharpe_ratio;
+    shrEl.className = 'value ' + (data.sharpe_ratio >= 0 ? 'positive' : 'negative');
+    document.getElementById('stat-buys').textContent = data.buy_signals;
+    document.getElementById('stat-sells').textContent = data.sell_signals;
+    stats.style.display = 'grid';
+
+    // Equity chart
+    const dates = data.dates.filter((_, i) => i % 5 === 0);
+    if (equityChart) equityChart.destroy();
+    equityChart = new Chart(document.getElementById('equity-chart'), {
+      type: 'line',
+      data: {
+        labels: data.dates,
+        datasets: [{
+          label: 'Portfolio Value',
+          data: data.equity_curve,
+          borderColor: '#7c6af7',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          backgroundColor: 'rgba(124,106,247,0.08)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#888' } } },
+        scales: {
+          x: { ticks: { color: '#555', maxTicksLimit: 8 }, grid: { color: '#1a1a1a' } },
+          y: { ticks: { color: '#555' }, grid: { color: '#1a1a1a' } }
+        }
+      }
+    });
+
+    // Z-score chart
+    if (zscoreChart) zscoreChart.destroy();
+    zscoreChart = new Chart(document.getElementById('zscore-chart'), {
+      type: 'line',
+      data: {
+        labels: data.dates,
+        datasets: [
+          {
+            label: 'Z-Score',
+            data: data.zscore,
+            borderColor: '#38bdf8',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#888' } },
+          annotation: { annotations: {} }
+        },
+        scales: {
+          x: { ticks: { color: '#555', maxTicksLimit: 8 }, grid: { color: '#1a1a1a' } },
+          y: { ticks: { color: '#555' }, grid: { color: '#1a1a1a' } }
+        }
+      }
+    });
+
+    charts.style.display = 'flex';
+
+  } catch (err) {
+    errorBox.textContent = 'Could not connect to backend. Make sure api.py is running on localhost:5000.';
+    errorBox.classList.add('active');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Backtest ↗';
+    loading.classList.remove('active');
+  }
+}
+</script>
+
+</body>
+</html>
