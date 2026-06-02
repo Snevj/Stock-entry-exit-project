@@ -29,7 +29,7 @@
     button#run-btn:hover { background: #6a5ae0; }
     button#run-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
 
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 900px; margin: 0 auto 40px; padding: 0 40px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1000px; margin: 0 auto 40px; padding: 0 40px; }
     .stat-card { background: #16161e; border: 1px solid #222; border-radius: 12px; padding: 20px; text-align: center; }
     .stat-card .value { font-size: 28px; font-weight: 600; color: #fff; margin-bottom: 4px; }
     .stat-card .value.positive { color: #4ade80; }
@@ -95,6 +95,10 @@
 <div class="stats" id="stats" style="display:none">
   <div class="stat-card"><div class="value" id="stat-return">—</div><div class="label">Total Return</div></div>
   <div class="stat-card"><div class="value" id="stat-sharpe">—</div><div class="label">Sharpe Ratio</div></div>
+  <div class="stat-card"><div class="value" id="stat-drawdown">—</div><div class="label">Max Drawdown</div></div>
+  <div class="stat-card"><div class="value" id="stat-winrate">—</div><div class="label">Win Rate</div></div>
+  <div class="stat-card"><div class="value" id="stat-pf">—</div><div class="label">Profit Factor</div></div>
+  <div class="stat-card"><div class="value" id="stat-buyhold">—</div><div class="label">Buy & Hold</div></div>
   <div class="stat-card"><div class="value" id="stat-buys">—</div><div class="label">Buy Signals</div></div>
   <div class="stat-card"><div class="value" id="stat-sells">—</div><div class="label">Sell Signals</div></div>
 </div>
@@ -146,15 +150,34 @@ async function runStrategy() {
 
     const data = await res.json();
 
-    // Stats
+   // Stats
     const retEl = document.getElementById('stat-return');
     retEl.textContent = data.total_return + '%';
     retEl.className = 'value ' + (data.total_return >= 0 ? 'positive' : 'negative');
+
     const shrEl = document.getElementById('stat-sharpe');
     shrEl.textContent = data.sharpe_ratio;
     shrEl.className = 'value ' + (data.sharpe_ratio >= 0 ? 'positive' : 'negative');
+
+    const ddEl = document.getElementById('stat-drawdown');
+    ddEl.textContent = data.max_drawdown + '%';
+    ddEl.className = 'value negative';
+
+    const wrEl = document.getElementById('stat-winrate');
+    wrEl.textContent = data.win_rate + '%';
+    wrEl.className = 'value ' + (data.win_rate >= 50 ? 'positive' : 'negative');
+
+    const pfEl = document.getElementById('stat-pf');
+    pfEl.textContent = data.profit_factor;
+    pfEl.className = 'value ' + (data.profit_factor >= 1 ? 'positive' : 'negative');
+
+    const bhEl = document.getElementById('stat-buyhold');
+    bhEl.textContent = data.buy_hold_return + '%';
+    bhEl.className = 'value ' + (data.buy_hold_return >= 0 ? 'positive' : 'negative');
+
     document.getElementById('stat-buys').textContent = data.buy_signals;
     document.getElementById('stat-sells').textContent = data.sell_signals;
+
     stats.style.display = 'grid';
 
     // Equity chart
