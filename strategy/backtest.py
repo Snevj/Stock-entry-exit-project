@@ -76,3 +76,45 @@ def backtest_api(signals, s1, s2, hedge_ratio, capital=10000):
         "zscore": [round(float(v), 4) for v in signals["zscore"].values],
         "signals": [int(v) for v in signals["signal"].values]
     }
+
+def calculate_metrics(daily_pnl, equity_curve, capital=10000):
+    import numpy as np
+
+    # Total return
+    total_return = (equity_curve.iloc[-1] - capital) / capital * 100
+
+    # Sharpe ratio
+    sharpe = (daily_pnl.mean() / daily_pnl.std()) * np.sqrt(252)
+
+    # Max drawdown — biggest peak to trough loss
+    rolling_max = equity_curve.cummax()
+    drawdown = (equity_curve - rolling_max) / rolling_max * 100
+    max_drawdown = drawdown.min()
+
+    # Win rate — % of trades that were profitable
+    winning_days = (daily_pnl > 0).sum()
+    total_days = (daily_pnl != 0).sum()
+    win_rate = (winning_days / total_days * 100) if total_days > 0 else 0
+
+    # Average win vs average loss
+    avg_win = daily_pnl[daily_pnl > 0].mean()
+    avg_loss = daily_pnl[daily_pnl < 0].mean()
+
+    # Profit factor
+    gross_profit = daily_pnl[daily_pnl > 0].sum()
+    gross_loss = abs(daily_pnl[daily_pnl < 0].sum())
+    profit_factor = gross_profit / gross_loss if gross_loss != 0 else 0
+
+    # Calmar ratio — return / max drawdown
+    calmar = total_return / abs(max_drawdown) if max_drawdown != 0 else 0
+
+    return {
+        "total_return": round(float(total_return), 2),
+        "sharpe_ratio": round(float(sharpe), 2),
+        "max_drawdown": round(float(max_drawdown), 2),
+        "win_rate": round(float(win_rate), 2),
+        "avg_win": round(float(avg_win), 4),
+        "avg_loss": round(float(avg_loss), 4),
+        "profit_factor": round(float(profit_factor), 2),
+        "calmar_ratio": round(float(calmar), 2)
+    }
