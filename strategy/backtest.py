@@ -12,7 +12,7 @@ def backtest(signals, s1, s2, hedge_ratio, capital=10000):
     daily_pnl = daily_pnl.fillna(0)
 
     # Transaction costs
-    transaction_cost = 0.001  # 0.1% per trade
+    transaction_cost = 0.0005  # 0.05%
     trades = position.diff().abs().fillna(0)
     cost = trades * transaction_cost * capital
     daily_pnl = daily_pnl - cost
@@ -25,8 +25,8 @@ def backtest(signals, s1, s2, hedge_ratio, capital=10000):
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10))
 
     ax1.plot(signals.index, signals["zscore"], label="Z-Score")
-    ax1.axhline(1.5, color='red', linestyle='--', label='Sell (1.5)')
-    ax1.axhline(-1.5, color='green', linestyle='--', label='Buy (-1.5)')
+    ax1.axhline(2.0, color='red', linestyle='--', label='Sell (2.0)')
+    ax1.axhline(-2.0, color='green', linestyle='--', label='Buy (-2.0)')
     ax1.axhline(0, color='gray', linestyle='-', alpha=0.3)
     ax1.set_title("Spread Z-Score")
     ax1.legend()
