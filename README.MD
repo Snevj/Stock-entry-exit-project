@@ -6,6 +6,9 @@ A quantitative trading system that uses **statistical arbitrage** and **ARIMA mo
 
 ## Live Demo
 
+[Visit Live Demo](https://snevj.github.io/Stock-entry-exit-project/)
+
+
 > Run locally following the setup below, or deploy to Render + GitHub Pages.
 
 ![Strategy Demo](docs/demo.png)
