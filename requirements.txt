@@ -2,7 +2,6 @@ flask
 flask-cors
 yfinance
 pandas
-numpy
+numpy<2.0.0
 statsmodels
-scipy
 matplotlib
